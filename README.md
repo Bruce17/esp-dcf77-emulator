@@ -1,2 +1,3 @@
-# esp-dcf77-emulator
-DCF77 emulator using ESP8266
+# DCF77 emulator using ESP8266
+
+In this project an ESP8266 is used to emulate a DCF77 which might not work properly due to interferences or bad connection. The main project idea is from [Elektor Magazine (DCF77 emulator with ESP8266)](https://www.elektormagazine.com/labs/dcf77-emulator-with-esp8266) (original [PDF article](https://polonai.se/pic/3x5dcf77clock/EN2018030221.pdf)). The NTP client implementation was not working properly so I replaced it with a NTP client solution provided by ESP8266/ESP32 ([Getting Current Date and Time with ESP8266  [...]](https://microcontrollerslab.com/current-date-time-esp8266-nodemcu-ntp-server/)) which is working more reliable and the code is slimmer.
