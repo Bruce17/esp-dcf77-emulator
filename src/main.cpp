@@ -1,4 +1,4 @@
-// #define DEBUG true
+#define DEBUG true
 
 /*
  Emulator DCF77
@@ -69,8 +69,7 @@
 #define HOSTNAME "ESP-DCF77"
 
 char ntpServer[40] = "de.pool.ntp.org";
-int gmtOffset_sec = 3600;
-int daylightOffset_sec = 3600;
+char timezone[40] = "CET-1CEST,M3.5.0/02,M10.5.0/03"; // https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
 
 // OTA settings
 unsigned int otaPort = 8266;
@@ -187,8 +186,9 @@ void prepareFileSystem()
 #endif
 
           strcpy(ntpServer, json["ntpServer"]);
-          gmtOffset_sec = json["gmtOffset_sec"];
-          daylightOffset_sec = json["daylightOffset_sec"];
+          // gmtOffset_sec = json["gmtOffset_sec"];
+          // daylightOffset_sec = json["daylightOffset_sec"];
+          strcpy(timezone, json["timezone"]);
           strcpy(otaPassword, json["otaPassword"]);
           otaPort = json["otaPort"];
         }
@@ -212,12 +212,6 @@ void prepareFileSystem()
 
 void connectToWiFi()
 {
-  char gmtOffset_buffer[6];
-  itoa(gmtOffset_sec, gmtOffset_buffer, 10);
-
-  char daylightOffset_buffer[6];
-  itoa(daylightOffset_sec, daylightOffset_buffer, 10);
-
   char otaPort_buffer[5];
   itoa(otaPort, otaPort_buffer, 10);
 
@@ -225,8 +219,7 @@ void connectToWiFi()
   // After connecting, parameter.getValue() will get you the configured value
   // id/name placeholder/prompt default length
   WiFiManagerParameter custom_ntp_server("ntp server", "NTP Server", ntpServer, 40);
-  WiFiManagerParameter custom_gmt_offset("gmt offset", "GMT offset", gmtOffset_buffer, 6);
-  WiFiManagerParameter custom_daylight_offset("daylight offset", "daylight saving offset", daylightOffset_buffer, 6);
+  WiFiManagerParameter custom_timezone("timezone", "timezone", timezone, 40);
   WiFiManagerParameter custom_ota_password("ota password", "OTA password", otaPassword, 32);
   WiFiManagerParameter custom_ota_port("ota port", "OTA port", otaPort_buffer, 5);
 
@@ -238,8 +231,7 @@ void connectToWiFi()
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
   wifiManager.addParameter(&custom_ntp_server);
-  wifiManager.addParameter(&custom_gmt_offset);
-  wifiManager.addParameter(&custom_daylight_offset);
+  wifiManager.addParameter(&custom_timezone);
   wifiManager.addParameter(&custom_ota_password);
   wifiManager.addParameter(&custom_ota_port);
 
@@ -280,15 +272,13 @@ void connectToWiFi()
 
   //read updated parameters
   strcpy(ntpServer, custom_ntp_server.getValue());
-  strcpy(gmtOffset_buffer, custom_gmt_offset.getValue());
-  strcpy(daylightOffset_buffer, custom_daylight_offset.getValue());
+  strcpy(timezone, custom_timezone.getValue());
   strcpy(otaPassword, custom_ota_password.getValue());
   strcpy(otaPort_buffer, custom_ota_port.getValue());
 #ifdef DEBUG
   Serial.println("The values in the file are: ");
   Serial.println("\tntp server : " + String(ntpServer));
-  Serial.println("\tgmt offset : " + String(gmtOffset_buffer));
-  Serial.println("\tdaylight saving offset : " + String(daylightOffset_buffer));
+  Serial.println("\ttimezone : " + String(timezone));
   Serial.println("\tota password : " + String(otaPassword));
   Serial.println("\tota port : " + String(otaPort_buffer));
 #endif
@@ -307,8 +297,7 @@ void connectToWiFi()
     JsonObject &json = jsonBuffer.createObject();
 #endif
     json["ntpServer"] = ntpServer;
-    json["gmtOffset_sec"] = atoi(gmtOffset_buffer);
-    json["daylightOffset_sec"] = atoi(daylightOffset_buffer);
+    json["timezone"] = timezone;
     json["otaPassword"] = otaPassword;
     json["otaPort"] = atoi(otaPort_buffer);
 
@@ -618,7 +607,8 @@ void setup()
 
   /*** NTP time ***/
   // Get time from NTP server
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  // configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  configTime(timezone, ntpServer);
 #ifdef DEBUG
   printLocalTime();
 #endif
