@@ -494,6 +494,10 @@ void readAndDecodeTime()
   time(&now);
   timeinfo = localtime(&now);
 
+  // Add time correction offset e.g. if DCF77 is send a little bit to late and the clock is 1-2 minutes behind.
+  timeinfo->tm_sec += timeCorrectionOffset;
+  mktime(timeinfo);
+
   // If we are over about the 56° second we risk to begin the pulses too late, so it's better
   // to skip at the half of the next minute and NTP+recalculate all again
   if (timeinfo->tm_sec > 56)
@@ -504,9 +508,6 @@ void readAndDecodeTime()
 
     return;
   }
-
-  // Add time correction offset e.g. if DCF77 is send a little bit to late and the clock is 1-2 minutes behind.
-  timeinfo->tm_sec += timeCorrectionOffset;
 
   // Calculate bis array for the first minute
   calculateArray(FirstMinutePulseBegin, timeinfo);
