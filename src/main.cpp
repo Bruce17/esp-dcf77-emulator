@@ -70,6 +70,7 @@
 
 char ntpServer[40] = "de.pool.ntp.org";
 char timezone[40] = "CET-1CEST,M3.5.0/02,M10.5.0/03"; // https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+int timeCorrectionOffset = 0; // Define a time correction offset in seconds
 
 // OTA settings
 unsigned int otaPort = 8266;
@@ -186,8 +187,7 @@ void prepareFileSystem()
 #endif
 
           strcpy(ntpServer, json["ntpServer"]);
-          // gmtOffset_sec = json["gmtOffset_sec"];
-          // daylightOffset_sec = json["daylightOffset_sec"];
+          timeCorrectionOffset = json["timeCorrectionOffset"];
           strcpy(timezone, json["timezone"]);
           strcpy(otaPassword, json["otaPassword"]);
           otaPort = json["otaPort"];
@@ -215,11 +215,15 @@ void connectToWiFi()
   char otaPort_buffer[5];
   itoa(otaPort, otaPort_buffer, 10);
 
+  char timeCorrectionOffset_buffer[5];
+  itoa(timeCorrectionOffset, timeCorrectionOffset_buffer, 10);
+
   // The extra parameters to be configured (can be either global or just in the setup)
   // After connecting, parameter.getValue() will get you the configured value
   // id/name placeholder/prompt default length
   WiFiManagerParameter custom_ntp_server("ntp server", "NTP Server", ntpServer, 40);
   WiFiManagerParameter custom_timezone("timezone", "timezone", timezone, 40);
+  WiFiManagerParameter custom_timeCorrectionOffset("time correction offset", "time correction offset in seconds", timeCorrectionOffset_buffer, 5);
   WiFiManagerParameter custom_ota_password("ota password", "OTA password", otaPassword, 32);
   WiFiManagerParameter custom_ota_port("ota port", "OTA port", otaPort_buffer, 5);
 
@@ -232,6 +236,7 @@ void connectToWiFi()
 
   wifiManager.addParameter(&custom_ntp_server);
   wifiManager.addParameter(&custom_timezone);
+  wifiManager.addParameter(&custom_timeCorrectionOffset);
   wifiManager.addParameter(&custom_ota_password);
   wifiManager.addParameter(&custom_ota_port);
 
@@ -273,12 +278,14 @@ void connectToWiFi()
   //read updated parameters
   strcpy(ntpServer, custom_ntp_server.getValue());
   strcpy(timezone, custom_timezone.getValue());
+  strcpy(timeCorrectionOffset_buffer, custom_timeCorrectionOffset.getValue());
   strcpy(otaPassword, custom_ota_password.getValue());
   strcpy(otaPort_buffer, custom_ota_port.getValue());
 #ifdef DEBUG
   Serial.println("The values in the file are: ");
   Serial.println("\tntp server : " + String(ntpServer));
   Serial.println("\ttimezone : " + String(timezone));
+  Serial.println("\ttime correction offset (sec) : " + String(timeCorrectionOffset_buffer));
   Serial.println("\tota password : " + String(otaPassword));
   Serial.println("\tota port : " + String(otaPort_buffer));
 #endif
@@ -298,6 +305,7 @@ void connectToWiFi()
 #endif
     json["ntpServer"] = ntpServer;
     json["timezone"] = timezone;
+    json["timeCorrectionOffset"] = atoi(timeCorrectionOffset_buffer);
     json["otaPassword"] = otaPassword;
     json["otaPort"] = atoi(otaPort_buffer);
 
@@ -496,6 +504,9 @@ void readAndDecodeTime()
 
     return;
   }
+
+  // Add time correction offset e.g. if DCF77 is send a little bit to late and the clock is 1-2 minutes behind.
+  timeinfo->tm_sec += timeCorrectionOffset;
 
   // Calculate bis array for the first minute
   calculateArray(FirstMinutePulseBegin, timeinfo);
